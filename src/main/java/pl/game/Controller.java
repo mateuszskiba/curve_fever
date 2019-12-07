@@ -1,4 +1,4 @@
-package pl.poznan.put;
+package pl.game;
 
 public class Controller {
 }

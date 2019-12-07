@@ -1,4 +1,4 @@
-package pl.poznan.put;
+package pl.game;
 
 import javafx.scene.paint.Color;
 
