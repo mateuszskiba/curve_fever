@@ -36,7 +36,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.1</version>
                 <configuration>
-                    <mainClass>pl.game.Board</mainClass>
+                    <mainClass>pl.curveFever.Board</mainClass>
                 </configuration>
             </plugin>
         </plugins>

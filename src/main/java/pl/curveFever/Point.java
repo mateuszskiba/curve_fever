@@ -1,4 +1,4 @@
-package pl.game;
+package pl.curveFever;
 
 public class Point {
     private boolean gap;

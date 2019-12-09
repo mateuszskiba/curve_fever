@@ -1,4 +1,4 @@
-package pl.game;
+package pl.curveFever;
 
 import javafx.scene.paint.Color;
 
