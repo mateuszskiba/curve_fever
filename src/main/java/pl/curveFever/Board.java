@@ -3,14 +3,12 @@ package pl.curveFever;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Alert;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -37,20 +35,19 @@ public class Board extends Application {
     private static final double BOUNDS_WIDTH = 4.0;
     private static final String TITLE = "Curve fever!";
     private static final Color BOUNDS_COLOR = Color.BLACK;
-    private static int currentNumberOfPlayers = NUMBER_OF_PLAYERS;
     private final Timer timer = new Timer();
     private final Timeline timeline = new Timeline();
     private Group root = new Group();
     private Scene scene = new Scene(root, WIDTH, HEIGHT);
     private Canvas canvas = new Canvas(WIDTH, HEIGHT);
     private GraphicsContext gc = canvas.getGraphicsContext2D();
-    private Player [] players;
-    private Game game = new Game();
+    private Game game;
 
     @Override
-    public void start(Stage primaryStage) throws Exception {
+    public void start(Stage primaryStage) {
         root.getChildren().add(canvas);
-        initPlayers(NUMBER_OF_PLAYERS);
+        game = new Game(NUMBER_OF_PLAYERS);
+        game.nextStep();
         timer.schedule(new TimerTask() {
 
             @Override
@@ -58,71 +55,64 @@ public class Board extends Application {
                 startDrawing();
             }
         }, START_DRAWING_DELAY);
-        for (int i=0; i < NUMBER_OF_PLAYERS; i++) {
-            this.drawLines(players[i]);
-        }
         timeline.getKeyFrames().add(new KeyFrame(Duration.seconds(KEYFRAME_DURATION_TIME), event -> {
-            for (int i=0; i < NUMBER_OF_PLAYERS; i++) {
-                players[i].generateNextLine();
-            }
-            if (game.checkCollision(players, currentNumberOfPlayers) == CollisionCheckResult.GAME_OVER) {
+            if (game.nextStep()) {
                 showResults();
             }
             gc.clearRect(0, 0, WIDTH, HEIGHT);
-            for (int i=0; i < NUMBER_OF_PLAYERS; i++) {
-                drawLines(players[i]);
-            }
+            List<Player> players = game.getPlayers();
+            players.forEach(this::drawLines);
         }));
         timeline.setCycleCount(Timeline.INDEFINITE);
 
         scene.setOnKeyPressed(event -> {
             if (event.getCode().ordinal() == KeyCode.LEFT.ordinal() && NUMBER_OF_PLAYERS > 0) {
-                players[0].setTurn(-1);
+                game.playerTurnLeft(0);
             } else if (event.getCode().ordinal() == KeyCode.RIGHT.ordinal() && NUMBER_OF_PLAYERS > 0) {
-                players[0].setTurn(1);
+                game.playerTurnRight(0);
             }
             if (event.getCode().ordinal() == KeyCode.A.ordinal() && NUMBER_OF_PLAYERS > 1) {
-                players[1].setTurn(-1);
+                game.playerTurnLeft(1);
             } else if (event.getCode().ordinal() == KeyCode.D.ordinal() && NUMBER_OF_PLAYERS > 1) {
-                players[1].setTurn(1);
+                game.playerTurnRight(1);
             }
             if (event.getCode().ordinal() == KeyCode.N.ordinal() && NUMBER_OF_PLAYERS > 2) {
-                players[2].setTurn(-1);
+                game.playerTurnLeft(2);
             } else if (event.getCode().ordinal() == KeyCode.M.ordinal() && NUMBER_OF_PLAYERS > 2) {
-                players[2].setTurn(1);
+                game.playerTurnRight(2);
             }
             if (event.getCode().ordinal() == KeyCode.NUMPAD8.ordinal() && NUMBER_OF_PLAYERS > 3) {
-                players[3].setTurn(-1);
+                game.playerTurnLeft(3);
             } else if (event.getCode().ordinal() == KeyCode.NUMPAD9.ordinal() && NUMBER_OF_PLAYERS > 3) {
-                players[3].setTurn(1);
+                game.playerTurnRight(3);
             }
             event.consume();
         });
 
         scene.setOnKeyReleased(event -> {
             if(event.getCode().ordinal() == KeyCode.LEFT.ordinal() && NUMBER_OF_PLAYERS > 0) {
-                players[0].setTurn(0);
+                game.playerGoStraight(0);
             }
             else if (event.getCode().ordinal() == KeyCode.RIGHT.ordinal() && NUMBER_OF_PLAYERS > 0) {
-                players[0].setTurn(0);
+                game.playerGoStraight(0);
             }
             if(event.getCode().ordinal() == KeyCode.A.ordinal() && NUMBER_OF_PLAYERS > 1) {
-                players[1].setTurn(0);
+                game.playerGoStraight(1);
             }
             else if (event.getCode().ordinal() == KeyCode.D.ordinal() && NUMBER_OF_PLAYERS > 1) {
-                players[1].setTurn(0);
+                game.playerGoStraight(1);
             }
             if(event.getCode().ordinal() == KeyCode.N.ordinal() && NUMBER_OF_PLAYERS > 2) {
-                players[2].setTurn(0);
+                game.playerGoStraight(2);
             }
             else if (event.getCode().ordinal() == KeyCode.M.ordinal() && NUMBER_OF_PLAYERS > 2) {
-                players[2].setTurn(0);
+                game.playerGoStraight(2);
             }
             if(event.getCode().ordinal() == KeyCode.NUMPAD8.ordinal() && NUMBER_OF_PLAYERS > 3) {
-                players[3].setTurn(0);
+                game.playerGoStraight(3);
             }
             else if (event.getCode().ordinal() == KeyCode.NUMPAD9.ordinal() && NUMBER_OF_PLAYERS > 3) {
-                players[3].setTurn(0);
+                game.playerGoStraight(3);
             }
             event.consume();
         });
@@ -134,9 +124,7 @@ public class Board extends Application {
     }
 
     private void startDrawing() {
-        for (Player p : players) {
-            p.setDraw(true);
-        }
+        game.setDraw(true);
         final long time = Math.round(MIN_TIME_OF_DRAWING + random() * (MAX_TIME_OF_DRAWING - MIN_TIME_OF_DRAWING));
         timer.schedule(new TimerTask() {
 
@@ -148,10 +136,7 @@ public class Board extends Application {
     }
 
     private void stopDrawing() {
-        for (Player p : players) {
-            p.markGap();
-            p.setDraw(false);
-        }
+        game.setDraw(false);
         final long time = Math.round(MIN_TIME_OF_DELAY + random() * (MAX_TIME_OF_DELAY - MIN_TIME_OF_DELAY));
         timer.schedule(new TimerTask() {
 
@@ -165,12 +150,7 @@ public class Board extends Application {
 
 
     private void showResults() {
-        int winnerIndex = -1;
-        for (int i = 0; i < NUMBER_OF_PLAYERS; i++) {
-            if (players[i].isNowPlaying()) {
-                winnerIndex = i;
-            }
-        }
+        int winnerIndex = game.getWinnerIdx();
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setHeaderText(null);
         alert.setTitle(TITLE);
@@ -200,28 +180,6 @@ public class Board extends Application {
             double r = END_CIRCLE_RADIUS * LINE_WIDTH;
             gc.setFill(player.getColor());
             gc.fillOval(player.getCurrentX() - r, player.getCurrentY() - r, 2 * r, 2 * r);
-        }
-    }
-
-    private void initPlayers(final int maxNumberOfPlayers) {
-        players = new Player[maxNumberOfPlayers];
-        if (maxNumberOfPlayers == 1) {
-            players[0] = new Player(WIDTH/2.0, HEIGHT/2.0, random()*2*PI, Color.RED);
-        }
-        else if (maxNumberOfPlayers == 2) {
-            players[0] = new Player(WIDTH/3.0, HEIGHT/2.0, random()*2*PI, Color.RED);
-            players[1] = new Player(2*WIDTH/3.0, HEIGHT/2.0, random()*2*PI, Color.BLUE);
-        }
-        else if (maxNumberOfPlayers == 3) {
-            players[0] = new Player(WIDTH/3.0, HEIGHT/2.0, random()*2*PI, Color.RED);
-            players[1] = new Player(2*WIDTH/3.0, HEIGHT/2.0, random()*2*PI, Color.BLUE);
-            players[2] = new Player(WIDTH/2.0, 2*HEIGHT/3.0, random()*2*PI, Color.GREEN);
-        }
-        else if (maxNumberOfPlayers == 4) {
-            players[0] = new Player(WIDTH/3.0, HEIGHT/3.0, random()*2*PI, Color.RED);
-            players[1] = new Player(2*WIDTH/3.0, HEIGHT/3.0, random()*2*PI, Color.BLUE);
-            players[2] = new Player(WIDTH/3.0, 2*HEIGHT/3.0, random()*2*PI, Color.GREEN);
-            players[3] = new Player(2*WIDTH/3.0, 2*HEIGHT/3.0, random()*2*PI, Color.DARKTURQUOISE);
         }
     }
 }

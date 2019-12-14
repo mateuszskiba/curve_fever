@@ -1,39 +1,113 @@
 package pl.curveFever;
 
+import javafx.scene.paint.Color;
+
+import java.util.ArrayList;
 import java.util.List;
 
-import static java.lang.Math.max;
-import static java.lang.Math.min;
+import static java.lang.Math.*;
+import static java.lang.Math.PI;
 import static pl.curveFever.Board.HEIGHT;
 import static pl.curveFever.Board.WIDTH;
 
 public class Game {
+    private List<Player> players = new ArrayList<>();
+    private int initNumberOfPlayers;
+    private int currentNumberOfPlayers;
 
-    public CollisionCheckResult checkCollision(Player[] players, int currentNumberOfPlayers) {
-        for (int i = 0; i < players.length; i++) {
-            if (!players[i].isNowPlaying()) continue;
-            final List<Point> iVisited = players[i].getVisited();
+    public Game(final int initNumberOfPlayers) {
+        this.initNumberOfPlayers = initNumberOfPlayers;
+        this.currentNumberOfPlayers = initNumberOfPlayers;
+        if (initNumberOfPlayers == 1) {
+            players.add(new Player(WIDTH/2.0, HEIGHT/2.0, random()*2*PI, Color.RED));
+        }
+        else if (initNumberOfPlayers == 2) {
+            players.add(new Player(WIDTH/3.0, HEIGHT/2.0, random()*2*PI, Color.RED));
+            players.add(new Player(2*WIDTH/3.0, HEIGHT/2.0, random()*2*PI, Color.BLUE));
+        }
+        else if (initNumberOfPlayers == 3) {
+            players.add(new Player(WIDTH/3.0, HEIGHT/2.0, random()*2*PI, Color.RED));
+            players.add(new Player(2*WIDTH/3.0, HEIGHT/2.0, random()*2*PI, Color.BLUE));
+            players.add(new Player(WIDTH/2.0, 2*HEIGHT/3.0, random()*2*PI, Color.GREEN));
+        }
+        else if (initNumberOfPlayers == 4) {
+            players.add(new Player(WIDTH/3.0, HEIGHT/3.0, random()*2*PI, Color.RED));
+            players.add(new Player(2*WIDTH/3.0, HEIGHT/3.0, random()*2*PI, Color.BLUE));
+            players.add(new Player(WIDTH/3.0, 2*HEIGHT/3.0, random()*2*PI, Color.GREEN));
+            players.add(new Player(2*WIDTH/3.0, 2*HEIGHT/3.0, random()*2*PI, Color.DARKTURQUOISE));
+        }
+    }
+
+    /**
+     * @return true when game is over
+     */
+    public boolean nextStep() {
+        players.forEach(Player::generateNextLine);
+        checkCollision();
+        return isGameOver();
+    }
+
+    public List<Player> getPlayers() {
+        return players;
+    }
+
+    public void playerTurnLeft(int idx) {
+        players.get(idx).setTurn(-1);
+    }
+
+    public void playerTurnRight(int idx) {
+        players.get(idx).setTurn(1);
+    }
+
+    public void playerGoStraight(int idx) {
+        players.get(idx).setTurn(0);
+    }
+
+    public void setDraw(boolean draw) {
+        players.forEach(player -> {
+            if (draw) {
+                player.markGap();
+            }
+            player.setDraw(draw);
+        });
+    }
+
+    public int getWinnerIdx() {
+        int winnerIndex = -1;
+        for (int i = 0; i < initNumberOfPlayers; i++) {
+            if (players.get(i).isNowPlaying()) {
+                winnerIndex = i;
+            }
+        }
+        return winnerIndex;
+    }
+
+    private void checkCollision() {
+        for (int i = 0; i < players.size(); i++) {
+            if (!players.get(i).isNowPlaying()) continue;
+            final List<Point> iVisited = players.get(i).getVisited();
             if (iVisited.size() > 1) {
                 Point last = iVisited.get(iVisited.size() - 1);
                 Point nextToLast = iVisited.get(iVisited.size() - 2);
-                for (int j = 0; j < players.length; j++) {
-                    final List <Point> jVisited = players[j].getVisited();
+                for (int j = 0; j < players.size(); j++) {
+                    final List <Point> jVisited = players.get(j).getVisited();
                     final int sizeToCheck = (i == j) ? jVisited.size() - 3 : jVisited.size() - 1;
                     for (int k = 0; k < sizeToCheck; k++) {
                         Point p1 = jVisited.get(k);
                         Point p2 = jVisited.get(k + 1);
                         if (!p1.isGap() && areIntersecting(p1, p2, nextToLast, last)) {
-                            players[i].setNowPlaying(false);
-                            if (--currentNumberOfPlayers <= 1) {
-//                                this.showResults();
-                                return CollisionCheckResult.GAME_OVER;
-                            }
+                            players.get(i).setNowPlaying(false);
+                            --currentNumberOfPlayers;
+                            return;
                         }
                     }
                 }
             }
         }
-        return CollisionCheckResult.CONTINUE_GAME;
+    }
+
+    private boolean isGameOver() {
+        return currentNumberOfPlayers <= 1;
     }
 
     private static boolean outOfBounds(Point p) {

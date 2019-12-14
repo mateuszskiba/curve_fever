@@ -49,8 +49,12 @@ public class Player {
     public void markGap() {
         if (nowPlaying) {
             final int size = visited.size();
-            final Point last = visited.get(size-1);
-            visited.set(size-1, new Point(last.getX(), last.getY(), true));
+            if (visited.isEmpty()) {
+                visited.add(new Point(currentX, currentY, false));
+            } else {
+                final Point last = visited.get(size - 1);
+                visited.set(size - 1, new Point(last.getX(), last.getY(), true));
+            }
         }
     }
 
